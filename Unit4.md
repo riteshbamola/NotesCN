@@ -299,3 +299,189 @@ Both Sequence and Acknowledgment numbers are important for:
 - **Error detection**
 - **Flow control**
 - **Congestion control**
+
+## Round Trip Time (RTT)
+
+**Round Trip Time** is the length of time it takes for a signal to be sent plus the length of time it takes for acknowledgment of that signal to be received.
+
+Time consists of the propagation time between the two points of signal.
+
+### Components of RTT
+
+- **Propagation Time** - Time taken to go one way (Sender → Receiver)
+- **RTT** - Time to go to sender then return back to receiver
+- **Formula:** RTT = 2 × Propagation Time
+
+### RTT Diagram
+
+```
+SENDER                           RECEIVER
+  │                                │
+  │──────── Data Packet ──────────→│ ← Propagation Time
+  │                                │
+  │←─────── ACK Packet ────────────│ ← Propagation Time
+  │                                │
+  ↑←──────── RTT ──────────────────→↑
+```
+
+## Congestion Control
+
+When many end devices send data over network at same time, the network becomes overloaded.
+
+**Example:** Just like traffic jam on roads, the network faces congestion when it can't handle too much data at once.
+
+**Congestion Control** means managing the traffic on network so that it does not get overloaded and data flows smoothly.
+
+### What Happens in Congestion?
+
+```
+┌─────────────────────────────────┐
+│        CONGESTION EFFECTS        │
+├─────────────────────────────────┤
+│ • Packet Loss                   │
+│ • Delay                         │
+│ • Retransmission                │
+│ • Poor Performance              │
+└─────────────────────────────────┘
+```
+
+### Why Does Congestion Happen?
+
+- **Too many users**
+- **Low bandwidth**
+- **Slow routers**
+- **Large packet size**
+
+### Goals of Congestion Control
+
+1. **Avoid overload**
+2. **Efficient use of network resources**
+3. **Improve speed and reliability**
+
+## Techniques of Congestion Control
+
+### Open Loop Congestion Control (Prevention Before Congestion)
+
+Try to avoid congestion from happening. Done by designing system smartly.
+
+**Techniques:**
+
+1. **Traffic Shaping** - Control rate at which data is sent
+2. **Admission Control** - Only allow new traffic if the network can handle it
+3. **Resource Reservation** - Reserve bandwidth before sending
+4. **Bandwidth Management** - Max amount of data that can be sent
+
+```
+OPEN LOOP CONTROL (Prevention)
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│ Traffic Shaping │    │ Admission       │    │ Resource        │
+│                 │    │ Control         │    │ Reservation     │
+│ Control sending │────│ Allow only if   │────│ Reserve         │
+│ rate            │    │ network can     │    │ bandwidth       │
+│                 │    │ handle          │    │ beforehand      │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+### Closed Loop Congestion Control (Done After Congestion Happens)
+
+Detect congestion and try to fix it.
+
+**Techniques:**
+
+1. **Back Pressure** - Intermediate router sends signal backward to slow down
+2. **Choke Packet** - Special packets sent to the sender to slow down
+3. **Explicit Notification** - Router informs sender about congestion
+
+```
+CLOSED LOOP CONTROL (After Detection)
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│ Back Pressure   │    │ Choke Packet    │    │ Explicit        │
+│                 │    │                 │    │ Notification    │
+│ Router signals  │    │ Special packet  │    │ Router informs  │
+│ backward to     │────│ to sender to    │────│ sender about    │
+│ slow down       │    │ slow down       │    │ congestion      │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+### Comparison: Open Loop vs Closed Loop
+
+| Aspect         | Open Loop                          | Closed Loop                  |
+| -------------- | ---------------------------------- | ---------------------------- |
+| **Timing**     | Before congestion                  | After congestion             |
+| **Approach**   | Prevention                         | Detection & Recovery         |
+| **Examples**   | Traffic shaping, Admission control | Back pressure, Choke packets |
+| **Complexity** | Simple                             | More complex                 |
+| **Efficiency** | Proactive                          | Reactive                     |
+
+# TCP Congestion Control
+
+TCP implements congestion control through **4 main parts:**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                    TCP CONGESTION CONTROL                                              │
+├─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                                         │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐                  │
+│  │     Part 1      │  │     Part 2      │  │     Part 3      │  │     Part 4      │                  │
+│  │                 │  │                 │  │                 │  │                 │                  │
+│  │ SLOW START      │  │ CONGESTION      │  │ FAST RETRANSMIT │  │ FAST RECOVERY   │                  │
+│  │                 │  │ AVOIDANCE       │  │                 │  │                 │                  │
+│  │ • Exponential   │  │ • Linear growth │  │ • Detect loss   │  │ • Avoid slow    │                  │
+│  │   cwnd growth   │  │ • cwnd += 1/cwnd│  │   via 3 dup    │  │   start phase   │                  │
+│  │ • cwnd *= 2     │  │   per RTT       │  │   ACKs          │  │ • cwnd = ssthresh│                  │
+│  │ • Until ssthresh│  │ • Probe for     │  │ • Immediate     │  │ • Continue CA   │                  │
+│  │   is reached    │  │   bandwidth     │  │   retransmit    │  │   mode          │                  │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘  └─────────────────┘                  │
+│                                                                                                         │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Detailed Explanation
+
+### Part 1: Slow Start
+
+- **Purpose**: Rapidly probe for available bandwidth when connection starts
+- **Mechanism**: Exponentially increase congestion window (cwnd)
+- **Formula**: cwnd = cwnd \* 2 (doubles every RTT)
+- **Trigger**: New connection or after timeout
+- **End Condition**: When cwnd reaches slow start threshold (ssthresh)
+
+### Part 2: Congestion Avoidance
+
+- **Purpose**: Conservatively probe for additional bandwidth
+- **Mechanism**: Linearly increase congestion window
+- **Formula**: cwnd = cwnd + 1/cwnd (increases by 1 per RTT)
+- **Trigger**: When cwnd >= ssthresh
+- **Behavior**: Additive increase, multiplicative decrease (AIMD)
+
+### Part 3: Fast Retransmit
+
+- **Purpose**: Quickly detect and respond to packet loss
+- **Mechanism**: Retransmit lost segment immediately upon receiving 3 duplicate ACKs
+- **Advantage**: Avoids waiting for retransmission timeout (RTO)
+- **Action**: Set ssthresh = cwnd/2, then proceed to Fast Recovery
+
+### Part 4: Fast Recovery
+
+- **Purpose**: Maintain high throughput during loss recovery
+- **Mechanism**: Avoid returning to Slow Start after fast retransmit
+- **Action**: Set cwnd = ssthresh + 3, continue in Congestion Avoidance
+- **Benefit**: Keeps pipeline full while recovering from loss
+
+## State Transitions
+
+```
+Connection Start → Slow Start → Congestion Avoidance
+                     ↓              ↓
+                  Timeout      3 Dup ACKs
+                     ↓              ↓
+                Slow Start ← Fast Recovery ← Fast Retransmit
+```
+
+## Key Variables
+
+- **cwnd**: Congestion window (sender's estimate of network capacity)
+- **ssthresh**: Slow start threshold (boundary between phases)
+- **RTT**: Round trip time
+- **RTO**: Retransmission timeout
